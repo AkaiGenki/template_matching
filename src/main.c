@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <ctype.h>
+#include <time.h>
 #include "pnmimg.h"
 
 #ifdef __STDC__
@@ -40,6 +41,7 @@ char *argv[] ;
     char *name_out = "result.ppm" ;
     RGB_PACKED_IMAGE *template ;
     RGB_PACKED_IMAGE *image ;
+    clock_t start, end;
     double cx, cy, rotation, scaling ;
     int icx, icy, irot, isx, isy ;
     int ret ;
@@ -58,6 +60,9 @@ char *argv[] ;
         return (1) ;
     }
 
+    // findPatternの実行時間を計測
+    start = clock(); // 開始時刻
+
     /*
      *  ２枚の画像が読み込まれました. ここから, これらの画像を
      *  パターンを探索する関数 findPattern() に渡して,
@@ -73,6 +78,9 @@ char *argv[] ;
 
     ret = findPattern( template, image,
                        &cx, &cy, &rotation, &scaling ) ;
+
+    end = clock(); // 終了時刻
+
     if ( ret == HAS_ERROR ) {
         printError( "findPattern" ) ;
         printf( "%s is failed to be searched in %s\n", name_tmp, name_img ) ;
@@ -94,6 +102,7 @@ char *argv[] ;
      *  結果を端末に出力し, 画像をファイルにセーブします.
      */
     printf( "%s is successfully searched in %s\n", name_tmp, name_img ) ;
+    printf( "processing time: %f [s]\n", (double)(end - start) / CLOCKS_PER_SEC) ;
     printf( "location (%5.1lf,%5.1lf), rotation %6.1lf, scaling %4.2lf\n",
             cx, cy, rotation, scaling ) ;
 
