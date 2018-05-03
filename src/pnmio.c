@@ -484,7 +484,7 @@ char *name ;
     FILE *fp ;
     int ch ;
 
-    if (!( fp = fopen( name, "rw" ))) {
+    if (!( fp = fopen( name, "rb" ))) {
         setError( E_FILE_OPEN ) ;
         printError( name ) ;
         return (0) ;
