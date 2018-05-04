@@ -105,6 +105,7 @@ RGB_PACKED_IMAGE    *allocRGBPackedImage __P(( int, int ));
 void            freeRGBPackedImage __P(( RGB_PACKED_IMAGE* ));
 RGB_PACKED_IMAGE    *readRGBPackedImage __P(( char* ));
 int         writeRGBPackedImage __P(( RGB_PACKED_IMAGE*, char* ));
+RGB_PACKED_IMAGE    *copyRGBPackedImage __P(( RGB_PACKED_IMAGE* ));
 
 RGB_PLANAR_IMAGE    *allocRGBPlanarImage __P(( int, int ));
 void            freeRGBPlanarImage __P(( RGB_PLANAR_IMAGE* ));

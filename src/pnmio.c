@@ -614,6 +614,26 @@ char *name ;
 }
 
 #ifdef __STDC__
+RGB_PACKED_IMAGE *
+copyRGBPackedImage( RGB_PACKED_IMAGE *img )
+#else
+RGB_PACKED_IMAGE *
+copyRGBPackedImage( img )
+RGB_PACKED_IMAGE *img ;
+#endif
+{
+    RGB_PACKED_IMAGE *copy_img ;
+
+    if (!( copy_img = allocRGBPackedImage( img->cols, img->rows ))) {
+        printError( "copy" ) ;
+        return (0) ;
+    }
+
+    memcpy(copy_img->data_p, img->data_p, img->cols * img->rows * sizeof(RGB_PACKED_PIXEL));
+    return copy_img;
+}
+
+#ifdef __STDC__
 RGB_PLANAR_IMAGE *
 allocRGBPlanarImage( int cols, int rows )
 #else
