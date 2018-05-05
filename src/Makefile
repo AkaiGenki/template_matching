@@ -1,6 +1,6 @@
 EXECUTABLE = ../findit
-OBJS = main.o findit.o pnmgrf.o pnmio.o pnmerr.o
-SRCS = main.c findit.c pnmgrf.c pnmio.c pnmerr.c
+OBJS = main.o findit.o pnmgrf.o pnmio.o pnmerr.o pnmtf.o
+SRCS = main.c findit.c pnmgrf.c pnmio.c pnmerr.c pnmtf.c
 RM = rm -f
 CFLAGS = -O2 -g -Wall
 LDFLAGS = -g
@@ -20,6 +20,8 @@ pnmgrf.o: pnmgrf.c pnmimg.h
 pnmio.o: pnmio.c pnmimg.h
 
 pnmerr.o: pnmerr.c pnmimg.h
+
+pnmtf.o: pnmtf.c pnmimg.h
 
 clean:
 	$(RM) $(EXECUTABLE) 

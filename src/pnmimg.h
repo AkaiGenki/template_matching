@@ -122,3 +122,4 @@ void    drawPolygonRGBPackedImage __P(( RGB_PACKED_IMAGE*, int*, int*, int ));
 void    drawRotatedRectangleRGBPackedImage __P(( RGB_PACKED_IMAGE*,
         int, int, int, int, int ));
 
+RGB_PACKED_IMAGE    *affine __P(( RGB_PACKED_IMAGE*, double, double ));
