@@ -21,8 +21,8 @@ double scaling ;
     double sin(), cos(), fabs() ;
 
     dr = rotation * 3.14159265358979323846 / 180.0 ;
-    sinR = sin ( -dr ) ;
-    cosR = cos ( -dr ) ;
+    sinR = sin ( dr ) ;
+    cosR = cos ( dr ) ;
 
     cols = (int)((fabs(img->cols * cosR) + fabs(img->rows * sinR)) * scaling);
     rows = (int)((fabs(img->cols * sinR) + fabs(img->rows * cosR)) * scaling);
