@@ -68,6 +68,7 @@ double *scaling ;
 	RGB_PACKED_PIXEL *pixel ;
 	RGB_PACKED_IMAGE *target, *tmp_img ;
 	int target_cx, target_cy;
+	int prev_mindiff;
 
 	/*
 	 *  テンプレートを当てはめる位置を探索画像の全範囲に移動させながら,
@@ -78,90 +79,175 @@ double *scaling ;
 	posx = 0; posy = 0;
 	rot = 0; scal = 10;
 
-	for (deg = -30; deg <= 30; deg++) {
-		for (sc = 5; sc <= 20; sc++) {
-			// 画像を変形する
-			tmp_img = affine(template, (double)deg, (double)sc / 10);
-			target = removeBackGroundColor(tmp_img, &target_cx, &target_cy);
+	do {
+		prev_mindiff = mindiff;
 
-			// 用済みのポインタは解放
-			freeRGBPackedImage(tmp_img);
+		// 画像を変形する
+		tmp_img = affine(template, (double)rot, (double)scal / 10);
+		target = removeBackGroundColor(tmp_img, &target_cx, &target_cy);
 
-			// 中心座標が存在しない（たぶんありえない）
-			if (target_cx == -1 || target_cy == -1) {
-				freeRGBPackedImage( target );
-				continue;
-			}
+		// 用済みのポインタは解放
+		freeRGBPackedImage(tmp_img);
 
-			/*
-			*  テンプレートの中心から見た, テンプレートの左上と右下の座標
-			*  (x0,y0) と (x1, y1) をあらかじめ求めておく.
-			*/
-			x0 = -target_cx ;
-			y0 = -target_cy ;
-			x1 = target->cols - 1 - target_cx ;
-			y1 = target->rows - 1 - target_cy ;
+		// 中心座標が存在しない（たぶんありえない）
+		if (target_cx == -1 || target_cy == -1) {
+			freeRGBPackedImage( target );
+			continue;
+		}
 
-			/*
-			x0 = -( target->cols / 2 ) ;
-			y0 = -( target->rows / 2 ) ;
-			x1 = ( target->cols - 1 ) / 2 ;
-			y1 = ( target->rows - 1 ) / 2 ;
-			*/
+		/*
+		*  テンプレートの中心から見た, テンプレートの左上と右下の座標
+		*  (x0,y0) と (x1, y1) をあらかじめ求めておく.
+		*/
+		x0 = -target_cx ;
+		y0 = -target_cy ;
+		x1 = target->cols - 1 - target_cx ;
+		y1 = target->rows - 1 - target_cy ;
 
-			max_pels = countPixels(target);
-		
-			for ( yy = -y1 ; yy < image->rows - y0 ; yy++ ) {
-				for ( xx = -x1 ; xx < image->cols - x0 ; xx++ ) {
+		/*
+		x0 = -( target->cols / 2 ) ;
+		y0 = -( target->rows / 2 ) ;
+		x1 = ( target->cols - 1 ) / 2 ;
+		y1 = ( target->rows - 1 ) / 2 ;
+		*/
 
-					/*
-					*  ある位置 (xx, yy) におけるふたつの画像間の差を求める.
-					*  画像の差とは, ここでは R,G,B 値の差の絶対値の累積を用いた.
-					*/
-					diff = 0 ; /* R,G,B それぞれの画素の差の累計 */
-					pels = 0 ; /* 有効な比較を行った画素数 */
-					pixel = target->data_p ; /* テンプレートデータの先頭画素 */
-					for ( dy = yy + y0 ; dy <= yy + y1 ; dy++ ) {
-						if ( dy >= 0 && dy < image->rows ) {
-							/* 探索画像の外(上/下)に出てないことを確認し... */
-							for ( dx = xx + x0 ; dx <= xx + x1 ; dx++, pixel++ ) {
-								if ( dx >= 0 && dx < image->cols ) {
-									/* 探索画像の外(左/右)に出てないことを確認し... */
-									if ( pixel->r != 255 || pixel->g != 255 || pixel->b != 255 ) {
-										/* テンプレート画素が背景でないことを確認し... */
-										pels ++ ;
-										if (( dr = image->p[dy][dx].r - pixel->r ) < 0 ) dr = -dr ;
-										if (( dg = image->p[dy][dx].g - pixel->g ) < 0 ) dg = -dg ;
-										if (( db = image->p[dy][dx].b - pixel->b ) < 0 ) db = -db ;
-										diff += ( dr + dg + db ) ;
-									}
+		max_pels = countPixels(target);
+
+		// 回転角と拡大率を固定して中心座標を探索
+		for ( yy = -y1 ; yy < image->rows - y0 ; yy++ ) {
+			for ( xx = -x1 ; xx < image->cols - x0 ; xx++ ) {
+
+				/*
+				*  ある位置 (xx, yy) におけるふたつの画像間の差を求める.
+				*  画像の差とは, ここでは R,G,B 値の差の絶対値の累積を用いた.
+				*/
+				diff = 0 ; /* R,G,B それぞれの画素の差の累計 */
+				pels = 0 ; /* 有効な比較を行った画素数 */
+				pixel = target->data_p ; /* テンプレートデータの先頭画素 */
+				for ( dy = yy + y0 ; dy <= yy + y1 ; dy++ ) {
+					if ( dy >= 0 && dy < image->rows ) {
+						/* 探索画像の外(上/下)に出てないことを確認し... */
+						for ( dx = xx + x0 ; dx <= xx + x1 ; dx++, pixel++ ) {
+							if ( dx >= 0 && dx < image->cols ) {
+								/* 探索画像の外(左/右)に出てないことを確認し... */
+								if ( pixel->r != 255 || pixel->g != 255 || pixel->b != 255 ) {
+									/* テンプレート画素が背景でないことを確認し... */
+									pels ++ ;
+									if (( dr = image->p[dy][dx].r - pixel->r ) < 0 ) dr = -dr ;
+									if (( dg = image->p[dy][dx].g - pixel->g ) < 0 ) dg = -dg ;
+									if (( db = image->p[dy][dx].b - pixel->b ) < 0 ) db = -db ;
+									diff += ( dr + dg + db ) ;
 								}
 							}
 						}
-						else {
-							/* テンプレートを一行読み飛ばしたので, ポインタを調整する */
-							pixel += target->cols ;
-						}
 					}
-					if ( pels * 20 >= max_pels ) { /* 有効に差が累積されていた場合には... */
-						diff /= pels ; /* 画素の差の累計を有効画素数で割って正規化する */
-						/*
-						*  これまでの結果と比較し, 差が小さければその位置を採用する.
-						*/
-						if ( diff < mindiff ) {
-							mindiff = diff ;
-							posx = xx ;
-							posy = yy ;
-							rot = deg;
-							scal = sc;
-						}
+					else {
+						/* テンプレートを一行読み飛ばしたので, ポインタを調整する */
+						pixel += target->cols ;
+					}
+				}
+				if ( pels * 20 >= max_pels ) { /* 有効に差が累積されていた場合には... */
+					diff /= pels ; /* 画素の差の累計を有効画素数で割って正規化する */
+					/*
+					*  これまでの結果と比較し, 差が小さければその位置を採用する.
+					*/
+					if ( diff < mindiff ) {
+						mindiff = diff ;
+						posx = xx ;
+						posy = yy ;
+						//rot = deg;
+						//scal = sc;
 					}
 				}
 			}
-
-			freeRGBPackedImage( target );
 		}
-	}
+
+		freeRGBPackedImage( target );
+
+		// 中心座標を固定して回転角と中心座標を探索
+		for (deg = -30; deg <= 30; deg++) {
+			for (sc = 5; sc <= 20; sc++) {
+				// 画像を変形する
+				tmp_img = affine(template, (double)deg, (double)sc / 10);
+				target = removeBackGroundColor(tmp_img, &target_cx, &target_cy);
+
+				// 用済みのポインタは解放
+				freeRGBPackedImage(tmp_img);
+
+				// 中心座標が存在しない（たぶんありえない）
+				if (target_cx == -1 || target_cy == -1) {
+					freeRGBPackedImage( target );
+					continue;
+				}
+
+				/*
+				*  テンプレートの中心から見た, テンプレートの左上と右下の座標
+				*  (x0,y0) と (x1, y1) をあらかじめ求めておく.
+				*/
+				x0 = -target_cx ;
+				y0 = -target_cy ;
+				x1 = target->cols - 1 - target_cx ;
+				y1 = target->rows - 1 - target_cy ;
+
+				/*
+				x0 = -( target->cols / 2 ) ;
+				y0 = -( target->rows / 2 ) ;
+				x1 = ( target->cols - 1 ) / 2 ;
+				y1 = ( target->rows - 1 ) / 2 ;
+				*/
+
+				max_pels = countPixels(target);
+
+				xx = posx;
+				yy = posy;
+
+				/*
+				*  ある位置 (xx, yy) におけるふたつの画像間の差を求める.
+				*  画像の差とは, ここでは R,G,B 値の差の絶対値の累積を用いた.
+				*/
+				diff = 0 ; /* R,G,B それぞれの画素の差の累計 */
+				pels = 0 ; /* 有効な比較を行った画素数 */
+				pixel = target->data_p ; /* テンプレートデータの先頭画素 */
+				for ( dy = yy + y0 ; dy <= yy + y1 ; dy++ ) {
+					if ( dy >= 0 && dy < image->rows ) {
+						/* 探索画像の外(上/下)に出てないことを確認し... */
+						for ( dx = xx + x0 ; dx <= xx + x1 ; dx++, pixel++ ) {
+							if ( dx >= 0 && dx < image->cols ) {
+								/* 探索画像の外(左/右)に出てないことを確認し... */
+								if ( pixel->r != 255 || pixel->g != 255 || pixel->b != 255 ) {
+									/* テンプレート画素が背景でないことを確認し... */
+									pels ++ ;
+									if (( dr = image->p[dy][dx].r - pixel->r ) < 0 ) dr = -dr ;
+									if (( dg = image->p[dy][dx].g - pixel->g ) < 0 ) dg = -dg ;
+									if (( db = image->p[dy][dx].b - pixel->b ) < 0 ) db = -db ;
+									diff += ( dr + dg + db ) ;
+								}
+							}
+						}
+					}
+					else {
+						/* テンプレートを一行読み飛ばしたので, ポインタを調整する */
+						pixel += target->cols ;
+					}
+				}
+				if ( pels * 20 >= max_pels ) { /* 有効に差が累積されていた場合には... */
+					diff /= pels ; /* 画素の差の累計を有効画素数で割って正規化する */
+					/*
+					*  これまでの結果と比較し, 差が小さければその位置を採用する.
+					*/
+					if ( diff < mindiff ) {
+						mindiff = diff ;
+						//posx = xx ;
+						//posy = yy ;
+						rot = deg;
+						scal = sc;
+					}
+				}
+
+				freeRGBPackedImage( target );
+			}
+		}
+	} while (prev_mindiff > mindiff);
 
 	if ( mindiff == 0x7fffffff )
 		return ( HAS_ERROR ) ; /* 画像間の差が更新されていないので失敗と判断 */
