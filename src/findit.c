@@ -19,6 +19,31 @@
 #include <ctype.h>
 #include "pnmimg.h"
 
+// 有効画素数を計算する
+#ifdef __STDC__
+int
+countPixels( RGB_PACKED_IMAGE *img )
+#else
+int
+countPixels( img )
+RGB_PACKED_IMAGE *img ;
+#endif
+{
+	int i, size, res;
+	RGB_PACKED_PIXEL *pixel ;
+
+	size = img->rows * img->cols;
+	pixel = img->data_p ;
+
+	res = 0;
+	for (i = 0; i < size; i++, pixel++) {
+		if ( pixel->r != 255 || pixel->g != 255 || pixel->b != 255 ) {
+			res++;
+		}
+	}
+	return res;
+}
+
 #ifdef __STDC__
 int
 findPattern( RGB_PACKED_IMAGE *template, RGB_PACKED_IMAGE *image,
@@ -38,7 +63,7 @@ double *scaling ;
 	int posx, posy, rot, scal ;
 	int xx, yy, dx, dy ;
 	int x0, y0, x1, y1 ;
-	int diff, pels, dr, dg, db ;
+	int diff, pels, max_pels, dr, dg, db ;
 	int deg, sc;
 	RGB_PACKED_PIXEL *pixel ;
 	RGB_PACKED_IMAGE *target, *tmp_img ;
@@ -83,6 +108,8 @@ double *scaling ;
 			x1 = ( target->cols - 1 ) / 2 ;
 			y1 = ( target->rows - 1 ) / 2 ;
 			*/
+
+			max_pels = countPixels(target);
 		
 			for ( yy = -y1 ; yy < image->rows - y0 ; yy++ ) {
 				for ( xx = -x1 ; xx < image->cols - x0 ; xx++ ) {
@@ -116,7 +143,7 @@ double *scaling ;
 							pixel += target->cols ;
 						}
 					}
-					if ( pels ) { /* 有効に差が累積されていた場合には... */
+					if ( pels * 20 >= max_pels ) { /* 有効に差が累積されていた場合には... */
 						diff /= pels ; /* 画素の差の累計を有効画素数で割って正規化する */
 						/*
 						*  これまでの結果と比較し, 差が小さければその位置を採用する.
