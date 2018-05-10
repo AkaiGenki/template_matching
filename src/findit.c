@@ -41,7 +41,8 @@ double *scaling ;
 	int diff, pels, dr, dg, db ;
 	int deg, sc;
 	RGB_PACKED_PIXEL *pixel ;
-	RGB_PACKED_IMAGE *target ;
+	RGB_PACKED_IMAGE *target, *tmp_img ;
+	int target_cx, target_cy;
 
 	/*
 	 *  テンプレートを当てはめる位置を探索画像の全範囲に移動させながら,
@@ -54,17 +55,35 @@ double *scaling ;
 
 	for (deg = -30; deg <= 30; deg++) {
 		for (sc = 5; sc <= 20; sc++) {
-			target = affine(template, (double)deg, (double)sc / 10);
+			// 画像を変形する
+			tmp_img = affine(template, (double)deg, (double)sc / 10);
+			target = removeBackGroundColor(tmp_img, &target_cx, &target_cy);
+
+			// 用済みのポインタは解放
+			freeRGBPackedImage(tmp_img);
+
+			// 中心座標が存在しない（たぶんありえない）
+			if (target_cx == -1 || target_cy == -1) {
+				freeRGBPackedImage( target );
+				continue;
+			}
 
 			/*
 			*  テンプレートの中心から見た, テンプレートの左上と右下の座標
 			*  (x0,y0) と (x1, y1) をあらかじめ求めておく.
 			*/
+			x0 = -target_cx ;
+			y0 = -target_cy ;
+			x1 = target->cols - 1 - target_cx ;
+			y1 = target->rows - 1 - target_cy ;
+
+			/*
 			x0 = -( target->cols / 2 ) ;
 			y0 = -( target->rows / 2 ) ;
 			x1 = ( target->cols - 1 ) / 2 ;
 			y1 = ( target->rows - 1 ) / 2 ;
-
+			*/
+		
 			for ( yy = -y1 ; yy < image->rows - y0 ; yy++ ) {
 				for ( xx = -x1 ; xx < image->cols - x0 ; xx++ ) {
 

@@ -50,3 +50,79 @@ double scaling ;
 
     return res;
 }
+
+/*
+    背景画素を除去してなるべく画像サイズを小さくする
+    cx, cyは元画像の中心座標に対応する背景画素除去後の画像の座標
+ */
+#ifdef __STDC__
+RGB_PACKED_IMAGE *
+removeBackGroundColor( RGB_PACKED_IMAGE *img, int *cx, int *cy )
+#else
+RGB_PACKED_IMAGE *
+removeBackGroundColor( img )
+RGB_PACKED_IMAGE *img ;
+int *cx;
+int *cy;
+#endif
+{
+    RGB_PACKED_IMAGE *res ;
+    int i, j, ii, jj;
+    int xmin, ymin, xmax, ymax;
+    int cols, rows;
+    
+    /* 
+        画素が背景でない座標について，
+        x座標とy座標の最小値と最大値をそれぞれ求める
+     */
+    xmin = img->cols;
+    ymin = img->rows;
+    xmax = 0;
+    ymax = 0;
+    for (i = 0; i < img->rows; i++) {
+        for (j = 0; j < img->cols; j++) {
+            // 背景画素ではない
+            if (img->p[i][j].r != 255 || img->p[i][j].g != 255 || img->p[i][j].b != 255) {
+                if (xmin > j) xmin = j;
+                if (ymin > i) ymin = i;
+                if (xmax < j) xmax = j;
+                if (ymax < i) ymax = i;
+            }
+        }
+    }
+
+    // 背景画素を除いた画像のサイズを求める
+    cols = xmax - xmin + 1;
+    rows = ymax - ymin + 1;
+
+    if (cols <= 0 || rows <= 0) {
+        printError( "remove" ) ;
+        return (0) ;
+    }
+
+    if (!( res = allocRGBPackedImage( cols, rows ))) {
+        printError( "remove" ) ;
+        return (0) ;
+    }
+
+    *cx = -1;
+    *cy = -1;
+    // 背景画素を除いた画像の作成
+    for (i = 0; i < rows; i++) {
+        for (j = 0; j < cols; j++) {
+            // 背景画素を除いた画像の座標に対応する元画像の座標を求める
+            ii = ymin + i;
+            jj = xmin + j;
+
+            if (ii == img->rows / 2 && jj == img->cols / 2) {
+                *cx = j;
+                *cy = i;
+            }
+
+            res->p[i][j].r = img->p[ii][jj].r;
+            res->p[i][j].g = img->p[ii][jj].g;
+            res->p[i][j].b = img->p[ii][jj].b;
+        }
+    }
+    return res;
+}
